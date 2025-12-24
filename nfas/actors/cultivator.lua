@@ -113,6 +113,12 @@ function do_active()
 end
 
 function on_heart_beat()
+    local base_heart_beat = import_contract('contract.actor.normal').on_heart_beat
+    base_heart_beat()
+    try_xiuzhen()
+end
+
+function try_xiuzhen()
     local nfa_me = nfa_helper:get_info()
     local actor = contract_helper:get_actor_info(nfa_me.id)
 
@@ -129,7 +135,7 @@ function on_heart_beat()
         do_stop_cultivation()
         nfa_data.last_cultivation_time = 0
         nfa_helper:write_contract_data(nfa_data, { last_cultivation_time=true })
-    end
+    end    
 end
 
 function do_deposit_qi(amount)

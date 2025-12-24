@@ -11,7 +11,7 @@ function trigger()
     local nfa_me = nfa_helper:get_info()
     local actor = contract_helper:get_actor_info(nfa_me.id)
 
-    nfa_helper:modify_actor_attributes({ mood = 5 })
+    nfa_helper:modify_actor_attributes({ mood = 5 }, {})
 
     contract_helper:narrate(string.format('由于&YEL&乐观&NOR&天赋激发，%s的&HIC&快乐&NOR&上限增加了。', actor.name), false)
     return { triggered = true }

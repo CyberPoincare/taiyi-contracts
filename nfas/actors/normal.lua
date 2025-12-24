@@ -104,9 +104,59 @@ function do_stop_cultivation()
 end
 
 function on_heart_beat()
+    base_active()
+end
+
+function base_active()
     local nfa_me = nfa_helper:get_info()
     local actor = contract_helper:get_actor_info(nfa_me.id)
-    contract_helper:narrate(string.format("这里是&YEL&%s&NOR&的心跳。", actor.name), false)
+
+    if not actor.born then
+        contract_helper:narrate(string.format("&YEL&%s&NOR&还没有出生。", actor.name), true)
+        nfa_helper:disable_tick()
+        return
+    end
+
+    if actor.health <= 0 then
+        contract_helper:narrate(string.format("&YEL&%s&NOR&已经去世了。", actor.name), true)
+        nfa_helper:disable_tick()
+        return
+    end
+
+    local tiandao = contract_helper:get_tiandao_property()
+    local should_age = tiandao.v_years - actor.born_vyears;
+
+    if actor.age < should_age then
+        if tiandao.v_months >= actor.born_vmonths and tiandao.v_days >= actor.born_vdays then
+            local age = actor.age + 1;
+            nfa_helper:modify_actor_attributes({ age = 1 }, {})
+            --process talents
+            try_trigger_actor_talents(actor, age);
+
+            if age >= 30 then
+                -- healthy down
+                nfa_helper:modify_actor_attributes({ health = -1 }, { health = -1 })
+            end
+
+            --trigger actor grow
+            on_grown()
+        end
+    end
+end
+
+function try_trigger_actor_talents(actor, age)
+    local talents = actor.talents
+    for i, talent_id in pairs(talents) do
+        local trigger_num = nfa_helper:get_actor_talent_trigger_number(talent_id)
+        if trigger_num < 1 then
+            local talent = contract_helper:get_actor_talent_rule_info(talent_id)
+            local talent_contract = import_contract(talent.main_contract)
+            if talent_contract.trigger ~= nil then
+                talent_contract:trigger()
+            end
+            nfa_helper:set_actor_talent_trigger_number(talent_id, trigger_num+1)
+        end
+    end
 end
 
 function do_deposit_qi(amount)
