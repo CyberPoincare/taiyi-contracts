@@ -203,8 +203,23 @@ end
 
 function do_talk(someone, something)
     check_live()
-    local talk = import_contract("contract.cmds.std.talk").talk
-    talk(someone, something)
+
+    assert(type(someone) == "string", '谈话对象参数无效')
+    assert(type(something) == "string", '谈话内容参数无效')
+    assert(something ~= "", "总得说点什么吧")
+
+    local nfa_me = nfa_helper:get_info()
+    assert(nfa_me.data.is_actor == true, "只有角色才能调用talk")
+    assert(someone ~= "", "你得指定和谁谈话")
+    assert(contract_helper:is_actor_valid_by_name(someone), "找不到谈话目标")
+
+    local nfa_target = contract_helper:get_actor_info_by_name(someone)
+    assert(nfa_target.nfa_id ~= nfa_me.id, "不能和自己谈话")
+
+    local actor_me = contract_helper:get_actor_info(nfa_me.id)
+    assert(actor_me.location == nfa_target.location, "不能和不在同一地点的人谈话")
+
+    nfa_helper:talk_to_actor(someone, something)
 end
 
 -- 谈话回调函数
@@ -232,11 +247,12 @@ function on_actor_talking(someone, something)
     end
 
     local delta_favor = delta_favor_base * standpoint_fac
+    local relation = nfa_helper:get_actor_relation_info(someone)
+    local favor = math.min(30000, relation.favor + delta_favor);
+    nfa_helper:modify_actor_relation_values(someone, { favor = favor })
 
     contract_helper:narrate(string.format('&YEL&%s&NOR&对&YEL&%s&NOR&说道：%s', actor_me.name, someone, something), true)
     contract_helper:narrate(string.format('&YEL&%s&NOR&对&YEL&%s&NOR&的好感度改变了&GRN&%d&NOR&', actor_me.name, someone, delta_favor), true)
-
-    return { delta_favor }
 end
 
 -- 听话回调函数
@@ -267,9 +283,10 @@ function on_actor_listening(from_who, something)
     end
 
     local delta_favor = delta_favor_base * standpoint_fac
+    local relation = nfa_helper:get_actor_relation_info(from_who)
+    local favor = math.min(30000, relation.favor + delta_favor);
+    nfa_helper:modify_actor_relation_values(from_who, { favor = favor })
 
     contract_helper:narrate(string.format('&YEL&%s&NOR&对&YEL&%s&NOR&说道：%s', actor_me.name, from_who, talk_content), true)
     contract_helper:narrate(string.format('&YEL&%s&NOR&对&YEL&%s&NOR&的好感度改变了&GRN&%d&NOR&', actor_me.name, from_who, delta_favor), true)
-
-    return { delta_favor }
 end

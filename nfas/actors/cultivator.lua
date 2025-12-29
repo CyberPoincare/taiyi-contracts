@@ -182,8 +182,8 @@ end
 
 function do_talk(someone, something)
     check_live()
-    local talk = import_contract("contract.cmds.std.talk").talk
-    talk(someone, something)
+    local base_do_talk = import_contract('contract.actor.normal').do_talk
+    base_do_talk(someone, something)
 end
 
 -- 谈话回调函数
@@ -211,11 +211,12 @@ function on_actor_talking(someone, something)
     end
 
     local delta_favor = delta_favor_base * standpoint_fac
+    local relation = nfa_helper:get_actor_relation_info(someone)
+    local favor = math.min(30000, relation.favor + delta_favor);
+    nfa_helper:modify_actor_relation_values(someone, { favor = favor })
 
     contract_helper:narrate(string.format('&YEL&%s&NOR&对&YEL&%s&NOR&说道：%s', actor_me.name, someone, something), true)
     contract_helper:narrate(string.format('&YEL&%s&NOR&对&YEL&%s&NOR&的好感度改变了&GRN&%d&NOR&', actor_me.name, someone, delta_favor), true)
-
-    return { delta_favor }
 end
 
 -- 听话回调函数
@@ -246,9 +247,10 @@ function on_actor_listening(from_who, something)
     end
 
     local delta_favor = delta_favor_base * standpoint_fac
+    local relation = nfa_helper:get_actor_relation_info(from_who)
+    local favor = math.min(30000, relation.favor + delta_favor);
+    nfa_helper:modify_actor_relation_values(from_who, { favor = favor })
 
     contract_helper:narrate(string.format('&YEL&%s&NOR&对&YEL&%s&NOR&说道：%s', actor_me.name, from_who, talk_content), true)
     contract_helper:narrate(string.format('&YEL&%s&NOR&对&YEL&%s&NOR&的好感度改变了&GRN&%d&NOR&', actor_me.name, from_who, delta_favor), true)
-
-    return { delta_favor }
 end
