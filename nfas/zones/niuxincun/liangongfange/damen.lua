@@ -56,7 +56,7 @@ function on_actor_enter(actor_nfa_id)
 end
 
 function do_unlock()
-    assert(contract_helper:get_nfa_caller() == 11, "只有李火旺才能开锁")
+    assert(contract_helper:get_nfa_caller() == 15, "只有李火旺才能开锁")
 
     local nfa_data = nfa_helper:read_contract_data({ locked=true })
     nfa_data.locked = false
@@ -64,7 +64,7 @@ function do_unlock()
 end
 
 function do_lock()
-    assert(contract_helper:get_nfa_caller() == 11, "只有李火旺才能关锁")
+    assert(contract_helper:get_nfa_caller() == 15, "只有李火旺才能关锁")
 
     local nfa_data = nfa_helper:read_contract_data({ locked=true })
     nfa_data.locked = true

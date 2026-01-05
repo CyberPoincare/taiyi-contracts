@@ -18,7 +18,7 @@ function tick()
         nfa_helper:write_contract_data(nfa_data, { last_go_block=true })
     end
 
-    if (contract_helper:block() - nfa_data.last_go_block) < 20 then -- 大约每1分钟
+    if (contract_helper:block() - nfa_data.last_go_block) < 20 then -- 至少超过1分钟
         return
     end
 
@@ -46,7 +46,7 @@ function tick()
             end
 
             -- 只针对李火旺的逻辑
-            if nfa_me.id == 11 and zone_info.name == "牛心村.练功房东.大门" then
+            if nfa_me.id == 15 and zone_info.name == "牛心村.练功房东.大门" then
                 if nfa_data.patrol_dir == 1 then
                     -- open door
                     contract_helper:do_nfa_action(zone_info.nfa_id, 'unlock', {})

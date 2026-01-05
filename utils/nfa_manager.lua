@@ -32,6 +32,11 @@ function create_zone(zone_name, zone_type)
     contract_helper:narrate(string.format('名为%s的%s区域（nfa#%d）被创建', zone_name, chinese_types.zone_type_strings[zone_info.type_id+1], id), true)
 end
 
+function change_zone_type(zone_name, zone_type)
+    local zone_info = contract_helper:get_zone_info_by_name(zone_name)
+    contract_helper:change_zone_type(zone_info.nfa_id, zone_type)
+end
+
 -- Actor basic functions
 function create_actor_talent_rule(contract_name)
     local id = contract_helper:create_actor_talent_rule(contract_name)

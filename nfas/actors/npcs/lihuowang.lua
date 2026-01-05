@@ -87,14 +87,13 @@ function do_exploit(something)
 end
 
 function do_start_cultivation()
-    local start = import_contract("contract.cmds.std.cultivation").start
-    local qi = nfa_helper:get_info().qi / 2
-    start(math.floor(qi))
+    local base_do_start_cultivation = import_contract('contract.actor.cultivator').do_start_cultivation
+    base_do_start_cultivation()
 end
 
 function do_stop_cultivation()
-    local stop = import_contract("contract.cmds.std.cultivation").stop
-    stop()
+    local base_do_stop_cultivation = import_contract('contract.actor.cultivator').do_stop_cultivation
+    base_do_stop_cultivation()
 end
 
 function do_active()
@@ -157,36 +156,6 @@ end
 
 -- 听话回调函数
 function on_actor_listening(from_who, something)
-    local nfa_me = nfa_helper:get_info()
-    local actor_me = contract_helper:get_actor_info(nfa_me.id)
-    local attributes_me = contract_helper:get_actor_core_attributes(nfa_me.id)
-
-    local actor_from = contract_helper:get_actor_info_by_name(from_who)
-    local attributes_from = contract_helper:get_actor_core_attributes(actor_from.nfa_id)
-
-    -- 好感提升 = 基础值 × 立场系数
-    --  基础值 = 10 + 角色魅力/10 + 角色名誉，最低为10
-    --  双方处世立场的关系决定立场系数，并触发不同的对话：
-    --  若双方立场相同，立场系数 = 4
-    --  若一方立场为仁善或刚正，另一方为叛逆或唯我，立场系数 = 1
-    --  否则，立场系数 = 2
-    local delta_favor_base = math.max(10, 10 + math.floor(attributes_me.charm / 10))
-    local standpoint_dt = math.abs(actor_from.standpoint - actor_me.standpoint)
-    local standpoint_fac = 2
-    local talk_content = "如此……这般……或许……也不尽然……"
-    if standpoint_dt < 100 then
-        standpoint_fac = 4
-        talk_content = "如此……这般……不错……不错……正是如此！"
-    elseif standpoint_dt > 500 then
-        standpoint_fac = 1
-        talk_content = "如此……这般……不然……不然……岂有此理！？"
-    end
-
-    local delta_favor = delta_favor_base * standpoint_fac
-    local relation = nfa_helper:get_actor_relation_info(from_who)
-    local favor = math.min(30000, relation.favor + delta_favor);
-    nfa_helper:modify_actor_relation_values(from_who, { favor = favor })
-
-    contract_helper:narrate(string.format('&YEL&%s&NOR&对&YEL&%s&NOR&说道：%s', actor_me.name, from_who, talk_content), true)
-    contract_helper:narrate(string.format('&YEL&%s&NOR&对&YEL&%s&NOR&的好感度改变了&GRN&%d&NOR&', actor_me.name, from_who, delta_favor), true)
+    local base_on_actor_listening = import_contract('contract.actor.cultivator').on_actor_listening
+    base_on_actor_listening(from_who, something)
 end

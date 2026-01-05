@@ -50,3 +50,15 @@ function stop()
     nfa_data.cultivation = -1
     nfa_helper:write_contract_data(nfa_data, { cultivation=true })
 end
+
+function update()
+    local nfa_me = nfa_helper:get_info()
+    assert(nfa_me.data.is_actor == true, "只有角色才能调用")
+
+    -- 读取修真序号
+    local nfa_data = nfa_helper:read_contract_data({ cultivation=true, participate_qi=true })
+    if nfa_data.cultivation ~= nil and type(nfa_data.cultivation) == "number" and nfa_data.cultivation ~= -1 then
+        local err = contract_helper:update_cultivation(nfa_data.cultivation)
+        assert(err == '', string.format('%s。', err))
+    end
+end
