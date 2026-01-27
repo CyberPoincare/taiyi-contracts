@@ -63,10 +63,16 @@ end
 -- 出生角色
 -- gender: 0=random, -1=男, 1=女, -2=男生女相, 2=女生男相
 -- sexuality: 0=无性取向，1=喜欢男性，2=喜欢女性，3=双性恋
--- material_ratio: 将法宝材料注入到角色体内的比率万分比，[0, 10000]
+-- init_attrs: 初始属性列表，包含八个整数，按顺序对应初始的八项核心属性（strength、physique、agility、vitality、comprehension、willpower、charm、mood）,
+--             这八个属性值的总和不能超过角色（actor）信息中的 init_attribute_amount_max 属性值。
 -- 注意，这个行为的调用是从法宝的角度进来的，所以caller nfa是法宝，不是角色
-function do_born_actor(actor_name, gender, sexuality, init_attrs, material_ratio)
+function do_born_actor(actor_name, gender, sexuality, init_attrs)
     local nfa = nfa_helper:get_info()
+    -- 公用法宝，不需权限
+    -- assert(nfa.owner_account == contract_base_info.caller or nfa.active_account == contract_base_info.caller, "#t&&y#没有权限操作法宝#a&&i#")
+
+    assert(nfa.qi > 1000000, '衍童石真气不够，无法出生婴儿了！')
+
     local nfa_data = nfa_helper:read_contract_data({ set_zone=true })
     assert(nfa_data.set_zone ~= -1 and contract_helper:is_nfa_valid(nfa_data.set_zone), "法宝未安置好")
     local zone_nfa = contract_helper:get_nfa_info(nfa_data.set_zone)
@@ -84,28 +90,99 @@ function do_born_actor(actor_name, gender, sexuality, init_attrs, material_ratio
     actor = contract_helper:get_actor_info_by_name(actor_name)
     assert(actor.born == true, string.format('"%s"出生失败', actor_name))
 
-    -- 按等比率将法宝托管的资源材料注入物质给角色NFA，这样角色的五行将由法宝资源确定
+    -- 将法宝托管的资源材料按角色需要的最低等价物质量的2倍注入物质给角色NFA，角色的五行将由法宝资源确定
     local resources = contract_helper:get_nfa_resources(nfa.id)
-    local gold = resources.gold * material_ratio / 10000
-    local food = resources.food * material_ratio / 10000
-    local wood = resources.wood * material_ratio / 10000
-    local fabric = resources.fabric * material_ratio / 10000
-    local herb = resources.herb * material_ratio / 10000
-    if gold > 0 then
-        nfa_helper:inject_material_to(actor.nfa_id, gold, "GOLD", true)
+    local min_equivalent_qi = nfa.min_equivalent_qi * 2;
+    -- 逐资源按需求消耗法宝资源，直到法宝资源耗尽或需求满足
+
+    if min_equivalent_qi > 0 then
+        local gold = resources.gold
+        if gold > 0 then
+            local gold_qi = contract_helper:calc_max_equivalent_qi_from_asset(gold, "GOLD")
+            -- 注意计算资源之间的转换时，要考虑结果是取整后的值，所以结果表示的资源数量可能比实际的低。
+            if gold_qi > min_equivalent_qi then
+                local consume_gold = contract_helper:calc_max_equivalent_asset_from_qi(min_equivalent_qi, "GOLD")
+                -- 尽管资源转换计算有精度损失和取整损失，但由于注入量是按法宝需求量的两倍估算的，所以这个转换计算损失可以忽略不计
+                nfa_helper:inject_material_to(actor.nfa_id, consume_gold, "GOLD", true)
+                min_equivalent_qi = 0
+            else
+                nfa_helper:inject_material_to(actor.nfa_id, gold, "GOLD", true)
+                min_equivalent_qi = min_equivalent_qi - gold_qi
+            end
+        end
     end
-    if food > 0 then
-        nfa_helper:inject_material_to(actor.nfa_id, food, "FOOD", true)
+
+    if min_equivalent_qi > 0 then
+        local food = resources.food
+        if food > 0 then
+            local food_qi = contract_helper:calc_max_equivalent_qi_from_asset(food, "FOOD")
+            -- 注意计算资源之间的转换时，要考虑结果是取整后的值，所以结果表示的资源数量可能比实际的低。
+            if food_qi > min_equivalent_qi then
+                local consume_food = contract_helper:calc_max_equivalent_asset_from_qi(min_equivalent_qi, "FOOD")
+                -- 尽管资源转换计算有精度损失和取整损失，但由于注入量是按法宝需求量的两倍估算的，所以这个转换计算损失可以忽略不计
+                nfa_helper:inject_material_to(actor.nfa_id, consume_food, "FOOD", true)
+                min_equivalent_qi = 0
+            else
+                nfa_helper:inject_material_to(actor.nfa_id, food, "FOOD", true)
+                min_equivalent_qi = min_equivalent_qi - food_qi
+            end
+        end
     end
-    if wood > 0 then
-        nfa_helper:inject_material_to(actor.nfa_id, wood, "WOOD", true)
+
+    if min_equivalent_qi > 0 then
+        local wood = resources.wood
+        if wood > 0 then
+            local wood_qi = contract_helper:calc_max_equivalent_qi_from_asset(wood, "WOOD")
+            -- 注意计算资源之间的转换时，要考虑结果是取整后的值，所以结果表示的资源数量可能比实际的低。
+            if wood_qi > min_equivalent_qi then
+                local consume_wood = contract_helper:calc_max_equivalent_asset_from_qi(min_equivalent_qi, "WOOD")
+                -- 尽管资源转换计算有精度损失和取整损失，但由于注入量是按法宝需求量的两倍估算的，所以这个转换计算损失可以忽略不计
+                nfa_helper:inject_material_to(actor.nfa_id, consume_wood, "WOOD", true)
+                min_equivalent_qi = 0
+            else
+                nfa_helper:inject_material_to(actor.nfa_id, wood, "WOOD", true)
+                min_equivalent_qi = min_equivalent_qi - wood_qi
+            end
+        end
     end
-    if fabric > 0 then
-        nfa_helper:inject_material_to(actor.nfa_id, fabric, "FABR", true)
+
+    if min_equivalent_qi > 0 then
+        local fabric = resources.fabric
+        if fabric > 0 then
+            local fabric_qi = contract_helper:calc_max_equivalent_qi_from_asset(fabric, "FABR")
+            -- 注意计算资源之间的转换时，要考虑结果是取整后的值，所以结果表示的资源数量可能比实际的低。
+            if fabric_qi > min_equivalent_qi then
+                local consume_fabric = contract_helper:calc_max_equivalent_asset_from_qi(min_equivalent_qi, "FABR")
+                -- 尽管资源转换计算有精度损失和取整损失，但由于注入量是按法宝需求量的两倍估算的，所以这个转换计算损失可以忽略不计
+                nfa_helper:inject_material_to(actor.nfa_id, consume_fabric, "FABR", true)
+                min_equivalent_qi = 0
+            else
+                nfa_helper:inject_material_to(actor.nfa_id, fabric, "FABR", true)
+                min_equivalent_qi = min_equivalent_qi - fabric_qi
+            end
+        end
     end
-    if herb > 0 then
-        nfa_helper:inject_material_to(actor.nfa_id, herb, "HERB", true)
+
+    if min_equivalent_qi > 0 then
+        local herb = resources.herb
+        if herb > 0 then
+            local herb_qi = contract_helper:calc_max_equivalent_qi_from_asset(herb, "HERB")
+            -- 注意计算资源之间的转换时，要考虑结果是取整后的值，所以结果表示的资源数量可能比实际的低。
+            if herb_qi > min_equivalent_qi then
+                local consume_herb = contract_helper:calc_max_equivalent_asset_from_qi(min_equivalent_qi, "HERB")
+                -- 尽管资源转换计算有精度损失和取整损失，但由于注入量是按法宝需求量的两倍估算的，所以这个转换计算损失可以忽略不计
+                nfa_helper:inject_material_to(actor.nfa_id, consume_herb, "HERB", true)
+                min_equivalent_qi = 0
+            else
+                nfa_helper:inject_material_to(actor.nfa_id, herb, "HERB", true)
+                min_equivalent_qi = min_equivalent_qi - herb_qi
+            end
+        end
     end
+
+    assert(min_equivalent_qi == 0, '衍童石资源不够，无法出生婴儿了！')
+
+    nfa_helper:transfer_to(actor.nfa_id, 1000000, "QI", true)
 
     contract_helper:narrate(string.format('%d年%d月，"%s"在%s出生了', actor.born_vyears, actor.born_vmonths, actor_name, zone.name), false)
 end
@@ -113,6 +190,10 @@ end
 -- 升级角色（主合约升级）
 -- 注意，这个行为的调用是从法宝的角度进来的，所以caller nfa是法宝，不是角色
 function do_upgrade_actor(actor_name)
+    -- 公用法宝，不需权限
+    -- local nfa = nfa_helper:get_info()
+    -- assert(nfa.owner_account == contract_base_info.caller or nfa.active_account == contract_base_info.caller, "#t&&y#没有权限操作法宝#a&&i#")
+
     local nfa_data = nfa_helper:read_contract_data({ set_zone=true })
     assert(nfa_data.set_zone ~= -1 and contract_helper:is_nfa_valid(nfa_data.set_zone), "法宝未安置好")
     local zone_nfa = contract_helper:get_nfa_info(nfa_data.set_zone)
@@ -129,6 +210,10 @@ function do_upgrade_actor(actor_name)
 end
 
 function do_upgrade_actor_cultivator(actor_name)
+    -- 公用法宝，不需权限
+    -- local nfa = nfa_helper:get_info()
+    -- assert(nfa.owner_account == contract_base_info.caller or nfa.active_account == contract_base_info.caller, "#t&&y#没有权限操作法宝#a&&i#")
+
     local nfa_data = nfa_helper:read_contract_data({ set_zone=true })
     assert(nfa_data.set_zone ~= -1 and contract_helper:is_nfa_valid(nfa_data.set_zone), "法宝未安置好")
     local zone_nfa = contract_helper:get_nfa_info(nfa_data.set_zone)
@@ -145,6 +230,10 @@ function do_upgrade_actor_cultivator(actor_name)
 end
 
 function do_upgrade_actor_with(actor_name, main_contract)
+    -- 公用法宝，不需权限
+    -- local nfa = nfa_helper:get_info()
+    -- assert(nfa.owner_account == contract_base_info.caller or nfa.active_account == contract_base_info.caller, "#t&&y#没有权限操作法宝#a&&i#")
+
     local nfa_data = nfa_helper:read_contract_data({ set_zone=true })
     assert(nfa_data.set_zone ~= -1 and contract_helper:is_nfa_valid(nfa_data.set_zone), "法宝未安置好")
     local zone_nfa = contract_helper:get_nfa_info(nfa_data.set_zone)
